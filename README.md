@@ -46,7 +46,7 @@ let
   devEnv = import (
     builtins.fetchGit {
       url = "https://github.com/netbek/dev-env.git";
-      ref = "refs/tags/v1.0.0";
+      ref = "refs/tags/v1.0.1";
     }
   );
 in
