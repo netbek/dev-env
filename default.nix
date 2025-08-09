@@ -63,6 +63,7 @@ let
     else
       null;
 
+  # Destroy dev environment
   destroy = pkgs.writeShellApplication {
     name = "dev-env-destroy";
     runtimeInputs = [ pkgs.coreutils ];
@@ -71,7 +72,7 @@ let
       set -e
 
       echo "Destroying environment ..."
-      rm -rf .direnv "${stateDir}" "${venvDir}" "${nodeModulesDir}"
+      rm -fr .direnv "${stateDir}" "${venvDir}" "${nodeModulesDir}"
       rm -f .git/hooks/pre-commit
       echo "Environment destroyed."
     '';
@@ -90,6 +91,7 @@ pkgs.mkShell {
     ++ [
       pkgs.coreutils
       pkgs.gnused
+      pkgs.nixfmt-rfc-style
       destroy
     ]
     ++ (if pre-commit.enable then [ pkgs.pre-commit ] else [ ])
