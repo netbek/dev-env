@@ -43,14 +43,13 @@ dev-env-destroy
 ```nix
 let
   pkgs = import <nixpkgs> { };
-  devEnv = import (
-    builtins.fetchGit {
-      url = "https://github.com/netbek/dev-env.git";
-      ref = "refs/tags/v1.0.1";
+  dev-env = import (
+    builtins.fetchTarball {
+      url = "https://github.com/netbek/dev-env/archive/refs/tags/v1.0.1.tar.gz";
     }
   );
 in
-devEnv {
+dev-env {
   inherit pkgs;
 
   packages = [
