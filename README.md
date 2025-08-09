@@ -30,7 +30,7 @@ Create `.pre-commit-config.yaml`. [See example](.pre-commit-config.yaml).
 
 ## Uninstall
 
-To delete the dev environment (`.dev-env` and `.direnv`), Python virtual environment (if enabled) and Node modules (if enabled), run:
+To destroy the dev environment (`.dev-env` and `.direnv`), Python virtual environment (if enabled) and Node modules (if enabled), run:
 
 ```shell
 dev-env-destroy
