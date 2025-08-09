@@ -12,6 +12,8 @@ A basic dev environment using Nix.
 
 2. Create `shell.nix`. [See example](#usage).
 
+3. Create `.gitignore`. [See example](.gitignore).
+
 ## Automatic shell activation
 
 1. Install direnv:
@@ -44,7 +46,7 @@ let
   devEnv = import (
     builtins.fetchGit {
       url = "https://github.com/netbek/dev-env.git";
-      ref = "refs/tags/v0.0.1";
+      ref = "refs/tags/v1.0.0";
     }
   );
 in
