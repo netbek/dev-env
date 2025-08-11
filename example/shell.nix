@@ -2,7 +2,7 @@ let
   pkgs = import <nixpkgs> { };
   dev-env = import (
     builtins.fetchTarball {
-      url = "https://github.com/netbek/dev-env/archive/refs/tags/v1.0.1.tar.gz";
+      url = "https://github.com/netbek/dev-env/archive/refs/tags/v1.0.2.tar.gz";
     }
   );
 in
