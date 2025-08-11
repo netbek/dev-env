@@ -1,0 +1,10 @@
+# Dev environment
+.dev-env
+.direnv
+
+# Temporary files and virtual environments
+.pytest_cache
+.ruff_cache
+__pycache__
+node_modules
+venv
