@@ -138,6 +138,7 @@ pkgs.mkShell {
     packages
     ++ [
       pkgs.coreutils
+      pkgs.gawk
       pkgs.gnused
       pkgs.nixfmt-rfc-style
       destroyCmd
