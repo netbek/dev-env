@@ -123,9 +123,9 @@ pkgs.mkShell {
       pkgs.nixfmt-rfc-style
       destroyCmd
     ]
-    ++ (if pre-commit.enable then [ pkgs.pre-commit ] else [ ])
-    ++ (if pythonConfig.enable or false then [ pythonPkg ] else [ ])
-    ++ (if javascriptConfig.enable or false then [ nodePkg ] else [ ]);
+    ++ pkgs.lib.optionals pre-commit.enable [ pkgs.pre-commit ]
+    ++ pkgs.lib.optionals (pythonConfig.enable or false) [ pythonPkg ]
+    ++ pkgs.lib.optionals (javascriptConfig.enable or false) [ nodePkg ];
 
   shellHook = ''
     #!/usr/bin/env bash
