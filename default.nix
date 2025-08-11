@@ -9,7 +9,7 @@
 }:
 
 let
-  # Directory where state files (hashes, requirements, lockfiles) are stored
+  # Directory where state files (checksums, requirements, lockfiles) are stored
   stateDir = ".dev-env";
 
   # Python setup
@@ -117,38 +117,38 @@ pkgs.mkShell {
       echo "$1" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g'
     }
 
-    # Save sha256 hash of file to state directory
-    save_hash() {
+    # Save sha256 checksum of file to state directory
+    save_checksum() {
       local file="$1"
       local version="$2"
       local filename=$(basename "$file")
       local normalized_name=$(kebab_case "$filename")
-      local hash_file="${stateDir}/hash-$normalized_name"
-      local hash=$(sha256sum "$file" | cut -d' ' -f1)
-      local current="$version:$hash"
-      echo "$current" > "$hash_file"
+      local checksum_file="${stateDir}/checksum-$normalized_name"
+      local checksum=$(sha256sum "$file" | cut -d' ' -f1)
+      local actual="$version:$checksum"
+      echo "$actual" > "$checksum_file"
     }
 
-    # Check whether hash of file has changed compared to stored hash file
-    hash_changed() {
+    # Check whether checksum of file has changed compared to stored checksum file
+    checksum_changed() {
       local file="$1"
       local version="$2"
       local filename=$(basename "$file")
       local normalized_name=$(kebab_case "$filename")
-      local hash_file="${stateDir}/hash-$normalized_name"
-      local hash=$(sha256sum "$file" | cut -d' ' -f1)
-      local current="$version:$hash"
-      local stored=$(cat "$hash_file" 2>/dev/null || echo "")
-      [[ "$current" != "$stored" ]]
+      local checksum_file="${stateDir}/checksum-$normalized_name"
+      local checksum=$(sha256sum "$file" | cut -d' ' -f1)
+      local actual="$version:$checksum"
+      local stored=$(cat "$checksum_file" 2>/dev/null || echo "")
+      [[ "$actual" != "$stored" ]]
     }
 
-    # Remove file and its stored hash file from state directory
+    # Remove file and its stored checksum file from state directory
     untrack_file() {
       local file="$1"
       local filename=$(basename "$file")
       local normalized_name=$(kebab_case "$filename")
-      local hash_file="${stateDir}/hash-$normalized_name"
-      rm -f "$file" "$hash_file"
+      local checksum_file="${stateDir}/checksum-$normalized_name"
+      rm -f "$file" "$checksum_file"
     }
 
     ${
@@ -173,10 +173,10 @@ pkgs.mkShell {
             source ${venvDir}/bin/activate
           fi
 
-          if hash_changed "$requirements_file" "${pythonConfig.version}"; then
+          if checksum_changed "$requirements_file" "${pythonConfig.version}"; then
             echo "Installing Python dependencies ..."
             pip install -r "$requirements_file"
-            save_hash "$requirements_file" "${pythonConfig.version}"
+            save_checksum "$requirements_file" "${pythonConfig.version}"
           fi
         ''
       else
@@ -196,10 +196,10 @@ pkgs.mkShell {
           if [ -f package-lock.json ]; then
             cp -f package-lock.json "$lock_file"
 
-            if [ ! -d "${nodeModulesDir}" ] || hash_changed "$lock_file" "${javascriptConfig.version}"; then
+            if [ ! -d "${nodeModulesDir}" ] || checksum_changed "$lock_file" "${javascriptConfig.version}"; then
               echo "Installing Node dependencies ..."
               npm ci
-              save_hash "$lock_file" "${javascriptConfig.version}"
+              save_checksum "$lock_file" "${javascriptConfig.version}"
             fi
           else
             echo "package-lock.json not found"
