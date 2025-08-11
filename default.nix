@@ -120,22 +120,26 @@ pkgs.mkShell {
     # Save sha256 hash of file to state directory
     save_hash() {
       local file="$1"
+      local version="$2"
       local filename=$(basename "$file")
       local normalized_name=$(kebab_case "$filename")
       local hash_file="${stateDir}/hash-$normalized_name"
-      local current_hash=$(sha256sum "$file" | cut -d' ' -f1)
-      echo "$current_hash" > "$hash_file"
+      local hash=$(sha256sum "$file" | cut -d' ' -f1)
+      local current="$version:$hash"
+      echo "$current" > "$hash_file"
     }
 
     # Check whether hash of file has changed compared to stored hash file
     hash_changed() {
       local file="$1"
+      local version="$2"
       local filename=$(basename "$file")
       local normalized_name=$(kebab_case "$filename")
       local hash_file="${stateDir}/hash-$normalized_name"
-      local current_hash=$(sha256sum "$file" | cut -d' ' -f1)
-      local stored_hash=$(cat "$hash_file" 2>/dev/null || echo "")
-      [[ "$current_hash" != "$stored_hash" ]]
+      local hash=$(sha256sum "$file" | cut -d' ' -f1)
+      local current="$version:$hash"
+      local stored=$(cat "$hash_file" 2>/dev/null || echo "")
+      [[ "$current" != "$stored" ]]
     }
 
     # Remove file and its stored hash file from state directory
@@ -169,10 +173,10 @@ pkgs.mkShell {
             source ${venvDir}/bin/activate
           fi
 
-          if hash_changed "$requirements_file"; then
+          if hash_changed "$requirements_file" "${pythonConfig.version}"; then
             echo "Installing Python dependencies ..."
             pip install -r "$requirements_file"
-            save_hash "$requirements_file"
+            save_hash "$requirements_file" "${pythonConfig.version}"
           fi
         ''
       else
@@ -192,10 +196,10 @@ pkgs.mkShell {
           if [ -f package-lock.json ]; then
             cp -f package-lock.json "$lock_file"
 
-            if [ ! -d "${nodeModulesDir}" ] || hash_changed "$lock_file"; then
+            if [ ! -d "${nodeModulesDir}" ] || hash_changed "$lock_file" "${javascriptConfig.version}"; then
               echo "Installing Node dependencies ..."
               npm ci
-              save_hash "$lock_file"
+              save_hash "$lock_file" "${javascriptConfig.version}"
             fi
           else
             echo "package-lock.json not found"
