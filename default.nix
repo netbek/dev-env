@@ -200,7 +200,7 @@ pkgs.mkShell {
 
             if [ ! -d "${nodeModulesPath}" ] || checksum_changed "$state_lock_file" "${javascriptConfig.version}"; then
               echo "Installing Node dependencies ..."
-              npm ci
+              ${nodePkg}/bin/npm ci
               save_checksum "$state_lock_file" "${javascriptConfig.version}"
             fi
 
