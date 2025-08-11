@@ -173,6 +173,7 @@ pkgs.mkShell {
       if (pythonConfig.enable or false) && (venvConfig.enable or false) then
         ''
           mkdir -p "${devEnvPath}"
+          python_version="$(${pythonPkg}/bin/python --version | awk '{print $2}')"
           stored_requirements="${devEnvPath}/requirements.txt"
 
           if [ ! -d "${venvPath}" ]; then
@@ -191,10 +192,10 @@ pkgs.mkShell {
             source ${venvPath}/bin/activate
           fi
 
-          if checksum_changed "$stored_requirements" "${pythonConfig.version}"; then
+          if checksum_changed "$stored_requirements" "$python_version"; then
             echo "Installing Python dependencies ..."
             pip install -r "$stored_requirements"
-            save_checksum "$stored_requirements" "${pythonConfig.version}"
+            save_checksum "$stored_requirements" "$python_version"
           fi
         ''
       else
@@ -205,6 +206,7 @@ pkgs.mkShell {
       if (javascriptConfig.enable or false) && (npmConfig.enable or false) then
         ''
           mkdir -p "${devEnvPath}"
+          node_version="$(${nodePkg}/bin/node --version | sed 's/^v//')"
           source_package_lock="${rootPath}/package-lock.json"
           stored_package_lock="${devEnvPath}/package-lock.json"
 
@@ -215,10 +217,10 @@ pkgs.mkShell {
           if [ -f "$source_package_lock" ]; then
             cp -f "$source_package_lock" "$stored_package_lock"
 
-            if [ ! -d "${nodeModulesPath}" ] || checksum_changed "$stored_package_lock" "${javascriptConfig.version}"; then
+            if [ ! -d "${nodeModulesPath}" ] || checksum_changed "$stored_package_lock" "$node_version"; then
               echo "Installing Node dependencies ..."
               ${nodePkg}/bin/npm ci
-              save_checksum "$stored_package_lock" "${javascriptConfig.version}"
+              save_checksum "$stored_package_lock" "$node_version"
             fi
 
             export PATH="${nodeModulesPath}/.bin:$PATH"
