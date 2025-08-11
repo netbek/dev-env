@@ -17,35 +17,34 @@ let
   venvConfig = pythonConfig.venv or { };
   venvDir = venvConfig.directory or "venv";
 
-  nixpkgsPython38 = import (builtins.fetchTarball {
-    url = "https://github.com/NixOS/nixpkgs/archive/976fa3369d722e76f37c77493d99829540d43845.tar.gz";
-    sha256 = "1r6c7ggdk0546wzf2hvd5a7jwzsf3gn1flr8vjd685rm74syxv6d";
-  }) { };
-
   pythonPkg =
     if pythonConfig.enable or false then
       let
-        version = pythonConfig.version or "3";
+        version =
+          let
+            v = pythonConfig.version or "";
+          in
+          if builtins.match "^[0-9]+\\.[0-9]+$" v == null then
+            throw ''Invalid Python version: "${v}". Must be in the form "<major>.<minor>", e.g. "3.13"''
+          else
+            v;
+
+        basePkg =
+          if version == "3.8" then
+            (import (builtins.fetchTarball {
+              url = "https://github.com/NixOS/nixpkgs/archive/976fa3369d722e76f37c77493d99829540d43845.tar.gz";
+              sha256 = "1r6c7ggdk0546wzf2hvd5a7jwzsf3gn1flr8vjd685rm74syxv6d";
+            }) { }).python38
+          else
+            builtins.getAttr ("python" + builtins.replaceStrings [ "." ] [ "" ] version) pkgs;
       in
-      if version == "3.8" then
-        nixpkgsPython38.python38.withPackages (
-          ps: with ps; [
-            pip
-            setuptools
-            wheel
-          ]
-        )
-      else
-        let
-          pkg = builtins.getAttr ("python" + builtins.replaceStrings [ "." ] [ "" ] version) pkgs;
-        in
-        pkg.withPackages (
-          ps: with ps; [
-            pip
-            setuptools
-            wheel
-          ]
-        )
+      basePkg.withPackages (
+        ps: with ps; [
+          pip
+          setuptools
+          wheel
+        ]
+      )
     else
       null;
 
@@ -71,10 +70,15 @@ let
       #!/usr/bin/env bash
       set -e
 
-      echo "Destroying environment ..."
-      rm -fr .direnv "${stateDir}" "${venvDir}" "${nodeModulesDir}"
-      rm -f .git/hooks/pre-commit
-      echo "Environment destroyed."
+      if [ -d "${stateDir}" ]; then
+        echo "Destroying environment ..."
+        rm -fr .direnv "${stateDir}" "${venvDir}" "${nodeModulesDir}"
+        rm -f .git/hooks/pre-commit
+        echo "Environment destroyed."
+      else
+        echo "${stateDir} not found"
+        exit 1
+      fi
     '';
   };
 
@@ -147,6 +151,7 @@ pkgs.mkShell {
           fi
 
           cat ${toString (venvConfig.requirements or [ ])} | sort | uniq > "$requirements_file"
+          export PYTHONPATH=${pythonPkg}/${pythonPkg.sitePackages}
 
           if [ ! -d "${venvDir}" ]; then
             echo "Creating Python virtual environment: ${venvDir} ..."
@@ -177,12 +182,17 @@ pkgs.mkShell {
             untrack_file "$lock_file"
           fi
 
-          cp -f package-lock.json "$lock_file"
+          if [ -f package-lock.json ]; then
+            cp -f package-lock.json "$lock_file"
 
-          if [ ! -d "${nodeModulesDir}" ] || hash_changed "$lock_file"; then
-            echo "Installing Node dependencies ..."
-            npm ci
-            save_hash "$lock_file"
+            if [ ! -d "${nodeModulesDir}" ] || hash_changed "$lock_file"; then
+              echo "Installing Node dependencies ..."
+              npm ci
+              save_hash "$lock_file"
+            fi
+          else
+            echo "package-lock.json not found"
+            exit 1
           fi
         ''
       else
