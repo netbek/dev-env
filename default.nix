@@ -56,7 +56,14 @@ let
   nodePkg =
     if javascriptConfig.enable or false then
       let
-        version = javascriptConfig.version or "22";
+        version =
+          let
+            v = javascriptConfig.version or "";
+          in
+          if builtins.match "^[0-9]+$" v == null then
+            throw ''Invalid Node.js version: "${v}". Must be in the form "<major>", e.g. "22"''
+          else
+            v;
       in
       builtins.getAttr ("nodejs_" + version) pkgs
     else
