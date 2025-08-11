@@ -163,7 +163,7 @@ pkgs.mkShell {
           fi
 
           cat ${toString (venvConfig.requirements or [ ])} | sort | uniq > "$requirements_file"
-          export PYTHONPATH=${pythonPkg}/${pythonPkg.sitePackages}
+          export PYTHONPATH="${pythonPkg}/${pythonPkg.sitePackages}"
 
           if [ ! -d "${venvPath}" ]; then
             echo "Creating Python virtual environment: ${venvPath} ..."
