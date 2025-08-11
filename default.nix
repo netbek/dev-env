@@ -53,7 +53,7 @@ let
   # JavaScript setup
   javascriptConfig = languages.javascript or { };
   npmConfig = javascriptConfig.npm or { };
-  nodeModulesPath = "${rootPath}/${npmConfig.directory or "node_modules"}";
+  nodeModulesPath = "${rootPath}/node_modules";
 
   nodePkg =
     if javascriptConfig.enable or false then
@@ -193,7 +193,7 @@ pkgs.mkShell {
           fi
 
           if checksum_changed "$stored_requirements_file" "$python_version"; then
-            echo "Installing Python dependencies ..."
+            echo "Installing Python dependencies: ${venvPath} ..."
             pip install -r "$stored_requirements_file"
             save_checksum "$stored_requirements_file" "$python_version"
           fi
@@ -218,7 +218,7 @@ pkgs.mkShell {
             cp -f "$source_lock_file" "$stored_lock_file"
 
             if [ ! -d "${nodeModulesPath}" ] || checksum_changed "$stored_lock_file" "$node_version"; then
-              echo "Installing Node dependencies ..."
+              echo "Installing Node dependencies: ${nodeModulesPath} ..."
               ${nodePkg}/bin/npm ci
               save_checksum "$stored_lock_file" "$node_version"
             fi
