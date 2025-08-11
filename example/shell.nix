@@ -1,13 +1,14 @@
 let
   pkgs = import <nixpkgs> { };
+  rootPath = builtins.toString ./.;
   dev-env = import (
     builtins.fetchTarball {
-      url = "https://github.com/netbek/dev-env/archive/refs/tags/v1.0.2.tar.gz";
+      url = "https://github.com/netbek/dev-env/archive/refs/tags/v1.0.3.tar.gz";
     }
   );
 in
 dev-env {
-  inherit pkgs;
+  inherit pkgs rootPath;
 
   packages = [
     pkgs.pkg-config
@@ -35,7 +36,7 @@ dev-env {
     };
   };
 
-  pre-commit = {
-    enable = true;
-  };
+  # pre-commit = {
+  #   enable = true;
+  # };
 }
