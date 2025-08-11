@@ -174,13 +174,13 @@ pkgs.mkShell {
         ''
           mkdir -p "${devEnvPath}"
           python_version="$(${pythonPkg}/bin/python --version | awk '{print $2}')"
-          stored_requirements="${devEnvPath}/requirements.txt"
+          stored_requirements_file="${devEnvPath}/requirements.txt"
 
           if [ ! -d "${venvPath}" ]; then
-            untrack_file "$stored_requirements"
+            untrack_file "$stored_requirements_file"
           fi
 
-          cat ${toString (venvConfig.requirements or [ ])} | sort | uniq > "$stored_requirements"
+          cat ${toString (venvConfig.requirements or [ ])} | sort | uniq > "$stored_requirements_file"
           export PYTHONPATH="${pythonPkg}/${pythonPkg.sitePackages}"
 
           if [ ! -d "${venvPath}" ]; then
@@ -192,10 +192,10 @@ pkgs.mkShell {
             source ${venvPath}/bin/activate
           fi
 
-          if checksum_changed "$stored_requirements" "$python_version"; then
+          if checksum_changed "$stored_requirements_file" "$python_version"; then
             echo "Installing Python dependencies ..."
-            pip install -r "$stored_requirements"
-            save_checksum "$stored_requirements" "$python_version"
+            pip install -r "$stored_requirements_file"
+            save_checksum "$stored_requirements_file" "$python_version"
           fi
         ''
       else
@@ -207,25 +207,25 @@ pkgs.mkShell {
         ''
           mkdir -p "${devEnvPath}"
           node_version="$(${nodePkg}/bin/node --version | sed 's/^v//')"
-          source_package_lock="${rootPath}/package-lock.json"
-          stored_package_lock="${devEnvPath}/package-lock.json"
+          source_lock_file="${rootPath}/package-lock.json"
+          stored_lock_file="${devEnvPath}/package-lock.json"
 
           if [ ! -d "${nodeModulesPath}" ]; then
-            untrack_file "$stored_package_lock"
+            untrack_file "$stored_lock_file"
           fi
 
-          if [ -f "$source_package_lock" ]; then
-            cp -f "$source_package_lock" "$stored_package_lock"
+          if [ -f "$source_lock_file" ]; then
+            cp -f "$source_lock_file" "$stored_lock_file"
 
-            if [ ! -d "${nodeModulesPath}" ] || checksum_changed "$stored_package_lock" "$node_version"; then
+            if [ ! -d "${nodeModulesPath}" ] || checksum_changed "$stored_lock_file" "$node_version"; then
               echo "Installing Node dependencies ..."
               ${nodePkg}/bin/npm ci
-              save_checksum "$stored_package_lock" "$node_version"
+              save_checksum "$stored_lock_file" "$node_version"
             fi
 
             export PATH="${nodeModulesPath}/.bin:$PATH"
           else
-            echo "$source_package_lock not found"
+            echo "$source_lock_file not found"
             exit 1
           fi
         ''
