@@ -2,9 +2,11 @@
 .dev-env
 .direnv
 
-# Temporary files and virtual environments
+# Python
 .pytest_cache
 .ruff_cache
 __pycache__
-node_modules
 venv
+
+# Node
+node_modules
