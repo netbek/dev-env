@@ -10,8 +10,9 @@
 }:
 
 let
-  # Directory where state files (checksums, requirements, lockfiles) are stored
-  statePath = "${rootPath}/.dev-env";
+  devEnvPath = "${rootPath}/.dev-env"; # Contains state files, e.g. checksums, Python requirements, Node lockfiles
+  direnvPath = "${rootPath}/.direnv";
+  gitPath = "${rootPath}/.git";
 
   # Python setup
   pythonConfig = languages.python or { };
@@ -62,7 +63,7 @@ let
             v = javascriptConfig.version or "";
           in
           if builtins.match "^[0-9]+$" v == null then
-            throw ''Invalid Node.js version: "${v}". Must be in the form "<major>", e.g. "22"''
+            throw ''Invalid Node version: "${v}". Must be in the form "<major>", e.g. "22"''
           else
             v;
       in
@@ -71,20 +72,20 @@ let
       null;
 
   # Destroy dev environment
-  destroy = pkgs.writeShellApplication {
+  destroyCmd = pkgs.writeShellApplication {
     name = "dev-env-destroy";
     runtimeInputs = [ pkgs.coreutils ];
     text = ''
       #!/usr/bin/env bash
       set -e
 
-      if [ -d "${statePath}" ]; then
+      if [ -d "${devEnvPath}" ]; then
         echo "Destroying environment ..."
-        rm -fr "${rootPath}/.direnv" "${statePath}" "${venvPath}" "${nodeModulesPath}"
-        rm -f "${rootPath}/.git/hooks/pre-commit"
+        rm -fr "${devEnvPath}" "${direnvPath}" "${venvPath}" "${nodeModulesPath}"
+        rm -f "${gitPath}/hooks/pre-commit"
         echo "Environment destroyed."
       else
-        echo "${statePath} not found"
+        echo "${devEnvPath} not found"
         exit 1
       fi
     '';
@@ -104,7 +105,7 @@ pkgs.mkShell {
       pkgs.coreutils
       pkgs.gnused
       pkgs.nixfmt-rfc-style
-      destroy
+      destroyCmd
     ]
     ++ (if pre-commit.enable then [ pkgs.pre-commit ] else [ ])
     ++ (if pythonConfig.enable or false then [ pythonPkg ] else [ ])
@@ -124,7 +125,7 @@ pkgs.mkShell {
       local version="$2"
       local filename=$(basename "$file")
       local normalized_name=$(kebab_case "$filename")
-      local checksum_file="${statePath}/checksum-$normalized_name"
+      local checksum_file="${devEnvPath}/checksum-$normalized_name"
       local checksum=$(sha256sum "$file" | cut -d' ' -f1)
       local actual="$version:$checksum"
       echo "$actual" > "$checksum_file"
@@ -136,7 +137,7 @@ pkgs.mkShell {
       local version="$2"
       local filename=$(basename "$file")
       local normalized_name=$(kebab_case "$filename")
-      local checksum_file="${statePath}/checksum-$normalized_name"
+      local checksum_file="${devEnvPath}/checksum-$normalized_name"
       local checksum=$(sha256sum "$file" | cut -d' ' -f1)
       local actual="$version:$checksum"
       local stored=$(cat "$checksum_file" 2>/dev/null || echo "")
@@ -148,21 +149,21 @@ pkgs.mkShell {
       local file="$1"
       local filename=$(basename "$file")
       local normalized_name=$(kebab_case "$filename")
-      local checksum_file="${statePath}/checksum-$normalized_name"
+      local checksum_file="${devEnvPath}/checksum-$normalized_name"
       rm -f "$file" "$checksum_file"
     }
 
     ${
       if (pythonConfig.enable or false) && (venvConfig.enable or false) then
         ''
-          mkdir -p "${statePath}"
-          requirements_file="${statePath}/requirements.txt"
+          mkdir -p "${devEnvPath}"
+          stored_requirements="${devEnvPath}/requirements.txt"
 
           if [ ! -d "${venvPath}" ]; then
-            untrack_file "$requirements_file"
+            untrack_file "$stored_requirements"
           fi
 
-          cat ${toString (venvConfig.requirements or [ ])} | sort | uniq > "$requirements_file"
+          cat ${toString (venvConfig.requirements or [ ])} | sort | uniq > "$stored_requirements"
           export PYTHONPATH="${pythonPkg}/${pythonPkg.sitePackages}"
 
           if [ ! -d "${venvPath}" ]; then
@@ -174,10 +175,10 @@ pkgs.mkShell {
             source ${venvPath}/bin/activate
           fi
 
-          if checksum_changed "$requirements_file" "${pythonConfig.version}"; then
+          if checksum_changed "$stored_requirements" "${pythonConfig.version}"; then
             echo "Installing Python dependencies ..."
-            pip install -r "$requirements_file"
-            save_checksum "$requirements_file" "${pythonConfig.version}"
+            pip install -r "$stored_requirements"
+            save_checksum "$stored_requirements" "${pythonConfig.version}"
           fi
         ''
       else
@@ -187,26 +188,26 @@ pkgs.mkShell {
     ${
       if (javascriptConfig.enable or false) && (npmConfig.enable or false) then
         ''
-          mkdir -p "${statePath}"
-          lock_file="${rootPath}/package-lock.json"
-          state_lock_file="${statePath}/package-lock.json"
+          mkdir -p "${devEnvPath}"
+          source_package_lock="${rootPath}/package-lock.json"
+          stored_package_lock="${devEnvPath}/package-lock.json"
 
           if [ ! -d "${nodeModulesPath}" ]; then
-            untrack_file "$state_lock_file"
+            untrack_file "$stored_package_lock"
           fi
 
-          if [ -f "$lock_file" ]; then
-            cp -f "$lock_file" "$state_lock_file"
+          if [ -f "$source_package_lock" ]; then
+            cp -f "$source_package_lock" "$stored_package_lock"
 
-            if [ ! -d "${nodeModulesPath}" ] || checksum_changed "$state_lock_file" "${javascriptConfig.version}"; then
+            if [ ! -d "${nodeModulesPath}" ] || checksum_changed "$stored_package_lock" "${javascriptConfig.version}"; then
               echo "Installing Node dependencies ..."
               ${nodePkg}/bin/npm ci
-              save_checksum "$state_lock_file" "${javascriptConfig.version}"
+              save_checksum "$stored_package_lock" "${javascriptConfig.version}"
             fi
 
             export PATH="${nodeModulesPath}/.bin:$PATH"
           else
-            echo "$lock_file not found"
+            echo "$source_package_lock not found"
             exit 1
           fi
         ''
@@ -217,13 +218,13 @@ pkgs.mkShell {
     ${
       if pre-commit.enable then
         ''
-          if [ -d "${rootPath}/.git" ]; then
-            if [ ! -f "${rootPath}/.git/hooks/pre-commit" ]; then
+          if [ -d "${gitPath}" ]; then
+            if [ ! -f "${gitPath}/hooks/pre-commit" ]; then
               echo "Installing pre-commit ..."
               pre-commit install
             fi
           else
-            echo "${rootPath}/.git not found"
+            echo "${gitPath} not found"
             exit 1
           fi
         ''
