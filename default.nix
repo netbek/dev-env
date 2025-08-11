@@ -81,23 +81,42 @@ let
 
       if [ -d "${devEnvPath}" ]; then
         echo "Destroying environment ..."
-        rm -fr "${devEnvPath}" "${direnvPath}"
+
+        echo "Deleting: ${devEnvPath} ..."
+        rm -fr "${devEnvPath}"
+
+        echo "Deleting: ${direnvPath} ..."
+        rm -fr "${direnvPath}"
 
         ${
           if (pythonConfig.enable or false) && (venvConfig.enable or false) then
-            ''rm -fr "${venvPath}"''
+            ''
+              echo "Deleting: ${venvPath} ..."
+              rm -fr "${venvPath}"
+            ''
           else
             ""
         }
 
         ${
           if (javascriptConfig.enable or false) && (npmConfig.enable or false) then
-            ''rm -fr "${nodeModulesPath}"''
+            ''
+              echo "Deleting: ${nodeModulesPath} ..."
+              rm -fr "${nodeModulesPath}"
+            ''
           else
             ""
         }
 
-        ${if pre-commit.enable then ''rm -f "${gitPath}/hooks/pre-commit"'' else ""}
+        ${
+          if pre-commit.enable then
+            ''
+              echo "Deleting: ${gitPath}/hooks/pre-commit ..."
+              rm -f "${gitPath}/hooks/pre-commit"
+            ''
+          else
+            ""
+        }
 
         echo "Environment destroyed."
       else
