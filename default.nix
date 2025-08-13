@@ -14,7 +14,28 @@ let
   direnvPath = "${rootPath}/.direnv";
   gitPath = "${rootPath}/.git";
 
-  # Python setup
+  # Configure JavaScript
+  javascriptConfig = languages.javascript or { };
+  npmConfig = javascriptConfig.npm or { };
+  nodeModulesPath = "${rootPath}/node_modules";
+
+  nodePkg =
+    if javascriptConfig.enable or false then
+      let
+        version =
+          let
+            v = javascriptConfig.version or "";
+          in
+          if builtins.match "^[0-9]+$" v == null then
+            throw ''Invalid Node version: "${v}". Must be in the form "<major>", e.g. "22"''
+          else
+            v;
+      in
+      builtins.getAttr ("nodejs_" + version) pkgs
+    else
+      null;
+
+  # Configure Python
   pythonConfig = languages.python or { };
   venvConfig = pythonConfig.venv or { };
   venvPath = "${rootPath}/${venvConfig.directory or "venv"}";
@@ -50,28 +71,7 @@ let
     else
       null;
 
-  # JavaScript setup
-  javascriptConfig = languages.javascript or { };
-  npmConfig = javascriptConfig.npm or { };
-  nodeModulesPath = "${rootPath}/node_modules";
-
-  nodePkg =
-    if javascriptConfig.enable or false then
-      let
-        version =
-          let
-            v = javascriptConfig.version or "";
-          in
-          if builtins.match "^[0-9]+$" v == null then
-            throw ''Invalid Node version: "${v}". Must be in the form "<major>", e.g. "22"''
-          else
-            v;
-      in
-      builtins.getAttr ("nodejs_" + version) pkgs
-    else
-      null;
-
-  # Destroy dev environment
+  # Command that destroys dev environment
   destroyCmd = pkgs.writeShellApplication {
     name = "dev-env-destroy";
     runtimeInputs = [ pkgs.coreutils ];
@@ -128,19 +128,12 @@ let
 
 in
 pkgs.mkShell {
-  # Packages to install in shell:
-  # - user-specified packages
-  # - coreutils and gnused for shell functions
-  # - pre-commit if enabled
-  # - pythonPkg if Python is enabled
-  # - nodePkg if JavaScript is enabled
   buildInputs =
     packages
     ++ [
       pkgs.coreutils
       pkgs.gawk
       pkgs.gnused
-      pkgs.nixfmt-rfc-style
       destroyCmd
     ]
     ++ pkgs.lib.optionals pre-commit.enable [ pkgs.pre-commit ]

@@ -1,17 +1,17 @@
 let
   pkgs = import <nixpkgs> { };
+  rootPath = builtins.toString ./.;
   dev-env = import (
     builtins.fetchTarball {
-      url = "https://github.com/netbek/dev-env/archive/refs/tags/v1.0.3.tar.gz";
+      url = "https://github.com/netbek/dev-env/archive/refs/tags/v1.0.4.tar.gz";
     }
   );
-  rootPath = builtins.toString ./.;
 in
 dev-env {
   inherit pkgs rootPath;
 
   packages = [
-    pkgs.pkg-config
+    pkgs.nixfmt-rfc-style
   ];
 
   languages = {
