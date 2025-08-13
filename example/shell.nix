@@ -3,7 +3,7 @@ let
   rootPath = builtins.toString ./.;
   dev-env = import (
     builtins.fetchTarball {
-      url = "https://github.com/netbek/dev-env/archive/refs/tags/v1.0.4.tar.gz";
+      url = "https://github.com/netbek/dev-env/archive/refs/tags/v1.0.5.tar.gz";
     }
   );
 in
